@@ -1,0 +1,69 @@
+$primary: #6f8cff;
+$accent: #ffb454;
+$success: #76d97e;
+$warning: #f6c177;
+$danger: #ef6f78;
+$secondary: #9c9c9c;
+$tertiary: #5e5e5e;
+
+Screen {
+    background: #0d1117;
+    color: #e0e6f0;
+}
+
+#topbar {
+    dock: top;
+    height: 1;
+    background: #161b22;
+    color: $primary;
+    padding: 0 1;
+}
+
+#keybar {
+    dock: bottom;
+    height: 1;
+    background: #161b22;
+    color: $secondary;
+    padding: 0 1;
+}
+
+.panel {
+    border: round #2c3340;
+    padding: 0 1;
+    background: #0d1117;
+}
+
+.section-title {
+    color: $primary;
+    text-style: bold;
+}
+
+.dot-ok    { color: $success; }
+.dot-warn  { color: $warning; }
+.dot-error { color: $danger; }
+.dot-idle  { color: $tertiary; }
+
+AgentCard {
+    height: auto;
+    border: round #2c3340;
+    padding: 0 1;
+    margin-bottom: 1;
+}
+
+AgentCard.-running { border: round $warning; }
+AgentCard.-done    { border: round $success; }
+AgentCard.-waiting { border: round $danger; }
+AgentCard.-error   { border: round $danger; }
+AgentCard.-pending { opacity: 0.4; }
+
+.badge-pending  { color: $tertiary; }
+.badge-running  { color: $warning; }
+.badge-done     { color: $success; }
+.badge-waiting  { color: $danger; text-style: bold; }
+.badge-error    { color: $danger; text-style: bold; }
+.badge-fired    { color: $primary; }
+
+LogTail {
+    height: 6;
+    border: round #2c3340;
+}
