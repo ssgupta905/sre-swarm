@@ -61,7 +61,7 @@ function renderCards() {
   const grid = $("#components");
   grid.innerHTML = "";
   if (!integrations.length) {
-    grid.innerHTML = '<div class="empty">No integrations configured.</div>';
+    grid.innerHTML = '<div class="empty">// no adapters registered</div>';
     return;
   }
   const reachable = integrations.filter((i) => i.status === "reachable").length;
@@ -104,10 +104,10 @@ function renderCard(card) {
     : "never tested";
   foot.innerHTML = `<span class="comp-tested">${tested}</span><span class="comp-spacer"></span>`;
 
-  const testBtn = btn("Test", "comp-btn", () => doTest(card.name));
+  const testBtn = btn("probe", "comp-btn", () => doTest(card.name));
   if (testingNames.has(card.name)) {
     testBtn.disabled = true;
-    testBtn.textContent = "Testing…";
+    testBtn.textContent = "// probing…";
   }
   foot.appendChild(testBtn);
   if (card.editable_fields && card.editable_fields.length) {
@@ -204,7 +204,7 @@ async function doTest(name) {
 async function doTestAll() {
   const btnEl = $("#btn-refresh-all");
   btnEl.disabled = true;
-  btnEl.textContent = "Testing…";
+  btnEl.textContent = "// probing all…";
   integrations.forEach((i) => testingNames.add(i.name));
   renderCards();
   try {
@@ -218,7 +218,7 @@ async function doTestAll() {
     btnEl.disabled = false;
     btnEl.innerHTML = `
       <svg viewBox="0 0 16 16" width="12" height="12" fill="currentColor" aria-hidden="true"><path d="M1.705 8.005a.75.75 0 0 1 .834.656 5.5 5.5 0 0 0 9.592 2.97l-1.204-1.204a.25.25 0 0 1 .177-.427h3.646a.25.25 0 0 1 .25.25v3.646a.25.25 0 0 1-.427.177l-1.38-1.38A7.001 7.001 0 0 1 1.05 8.84a.75.75 0 0 1 .656-.834ZM8 1a6.99 6.99 0 0 1 5.927 3.06l1.422-1.422A.25.25 0 0 1 15.776 2.815v3.646a.25.25 0 0 1-.25.25H11.88a.25.25 0 0 1-.177-.427l1.225-1.224a5.5 5.5 0 0 0-9.59 1.929.75.75 0 0 1-1.444-.402A7.002 7.002 0 0 1 8 1Z"/></svg>
-      Re-test all`;
+      re-probe all`;
     renderCards();
   }
 }
@@ -450,10 +450,23 @@ function wireComposer() {
 }
 
 /* ---- boot ---- */
+function injectBuildHash() {
+  const header = document.querySelector("header");
+  if (!header || header.querySelector(".build-hash")) return;
+  const r = Math.floor(Math.random() * 0xfffff).toString(16).padStart(5, "0");
+  const span = document.createElement("span");
+  span.className = "build-hash";
+  span.title = "build hash · per-session";
+  span.textContent = `#${r}`;
+  const ref = header.querySelector(".page-title");
+  if (ref) ref.after(span); else header.prepend(span);
+}
+
 function init() {
   // Tag the h2 so we can rewrite it on tab switch.
   const h = $(".sys-h");
   if (h) h.id = "sys-h";
+  injectBuildHash();
   wireTabs();
   $("#btn-refresh-all").addEventListener("click", doTestAll);
   $("#btn-add-custom").addEventListener("click", doAddCustom);

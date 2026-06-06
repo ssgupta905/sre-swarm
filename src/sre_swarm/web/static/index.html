@@ -3,52 +3,65 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>SRE Swarm</title>
+  <title>MURMUR // swarm controller</title>
   <link rel="stylesheet" href="/static/style.css" />
 </head>
 <body>
+  <div class="flock" aria-hidden="true"></div>
   <header>
-    <span class="brand">SRE Swarm</span>
-    <span class="sep">&middot;</span>
-    <span id="status" class="status" data-kind="idle">idle</span>
+    <span class="brand">MURMUR</span>
+    <span class="sep">::</span>
+    <span class="page-title">swarm controller · v0</span>
+    <span class="sep">::</span>
+    <span id="status" class="status" data-kind="idle">//roosting</span>
     <span class="spacer"></span>
-    <a class="header-link" href="/system">System &rarr;</a>
+    <span id="fleet-meter" class="fleet-meter" title="agent fleet">fleet · 0 online</span>
+    <a class="header-link" href="/system">swarm://adapters &rarr;</a>
   </header>
 
   <main class="layout">
     <nav class="activity-bar" aria-label="sections">
-      <button class="act-btn active" data-tab="conversation" title="Conversation" aria-label="Conversation">
+      <button class="act-btn active" data-tab="conversation" title="console" aria-label="console">
         <svg viewBox="0 0 16 16" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M1.75 1h8.5c.966 0 1.75.784 1.75 1.75v5.5A1.75 1.75 0 0 1 10.25 10H7.061l-2.574 2.573A1.458 1.458 0 0 1 2 11.543V10H1.75A1.75 1.75 0 0 1 0 8.25v-5.5C0 1.784.784 1 1.75 1ZM14.5 7.25v-3a.75.75 0 0 1 1.5 0v3a3.25 3.25 0 0 1-3.25 3.25H9.061l-2.574 2.573A1.458 1.458 0 0 1 4 13.043V13.5a.75.75 0 0 1-1.5 0v-.957c0-.273.108-.535.301-.728L5 9.69h7.75A1.75 1.75 0 0 0 14.5 7.94v-.69Z"/></svg>
       </button>
-      <button class="act-btn" data-tab="vulns" title="Vulnerabilities" aria-label="Vulnerabilities">
+      <button class="act-btn" data-tab="vulns" title="anomalies" aria-label="anomalies">
         <svg viewBox="0 0 16 16" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M8 .25a.75.75 0 0 1 .673.418l1.882 3.815 4.21.612a.75.75 0 0 1 .416 1.279l-3.046 2.97.719 4.192a.75.75 0 0 1-1.088.791L8 12.347l-3.766 1.98a.75.75 0 0 1-1.088-.79l.72-4.194L.818 6.374a.75.75 0 0 1 .416-1.28l4.21-.611L7.327.668A.75.75 0 0 1 8 .25Z"/></svg>
         <span class="act-badge" id="vulns-count" hidden>0</span>
       </button>
-      <button class="act-btn" data-tab="inbox" title="Inbox" aria-label="Inbox">
+      <button class="act-btn" data-tab="inbox" title="queue" aria-label="queue">
         <svg viewBox="0 0 16 16" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M2.75 2.5h10.5a.75.75 0 0 1 .75.75v6a.75.75 0 0 1-.75.75h-2.81a.75.75 0 0 0-.53.22L8 12.94l-1.91-1.72a.75.75 0 0 0-.53-.22H2.75a.75.75 0 0 1-.75-.75v-6a.75.75 0 0 1 .75-.75Z"/></svg>
         <span class="act-badge" id="inbox-count" hidden>0</span>
       </button>
-      <button class="act-btn" data-tab="metrics" title="Metrics" aria-label="Metrics">
+      <button class="act-btn" data-tab="metrics" title="telemetry" aria-label="telemetry">
         <svg viewBox="0 0 16 16" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M1.5 1.75A.75.75 0 0 1 2.25 1h.5a.75.75 0 0 1 .75.75v11.5h11.75a.75.75 0 0 1 0 1.5H2.25a.75.75 0 0 1-.75-.75V1.75Zm14.28 2.53-5.25 5.25a.75.75 0 0 1-1.06 0L7 7.06 4.28 9.78a.75.75 0 0 1-1.06-1.06l3.25-3.25a.75.75 0 0 1 1.06 0L10 7.94l4.72-4.72a.75.75 0 1 1 1.06 1.06Z"/></svg>
       </button>
-      <button class="act-btn" data-tab="logs" title="Logs" aria-label="Logs">
+      <button class="act-btn" data-tab="logs" title="events" aria-label="events">
         <svg viewBox="0 0 16 16" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M2 2.75A.75.75 0 0 1 2.75 2h10.5a.75.75 0 0 1 .75.75v10.5a.75.75 0 0 1-.75.75H2.75a.75.75 0 0 1-.75-.75V2.75Zm2 2.75A.75.75 0 0 1 4.75 4.75h6.5a.75.75 0 0 1 0 1.5h-6.5A.75.75 0 0 1 4 5.5Zm0 3A.75.75 0 0 1 4.75 7.75h6.5a.75.75 0 0 1 0 1.5h-6.5A.75.75 0 0 1 4 8.5Zm0 3a.75.75 0 0 1 .75-.75h4a.75.75 0 0 1 0 1.5h-4a.75.75 0 0 1-.75-.75Z"/></svg>
       </button>
-      <button class="act-btn" data-tab="github" title="GitHub" aria-label="GitHub">
+      <button class="act-btn" data-tab="github" title="scm" aria-label="scm">
         <svg viewBox="0 0 16 16" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg>
       </button>
     </nav>
 
     <section class="editor-pane">
       <div id="pipeline" class="pipeline" aria-label="agent pipeline"></div>
+      <div id="scoreboard" class="scoreboard" aria-label="swarm scoreboard">
+        <span class="sb-cell" data-k="tools"><span class="sb-k">tools</span><span class="sb-v" id="sb-tools">0</span></span>
+        <span class="sb-cell" data-k="errs"><span class="sb-k">err</span><span class="sb-v" id="sb-errs">0</span></span>
+        <span class="sb-cell" data-k="lat"><span class="sb-k">avg·ms</span><span class="sb-v" id="sb-lat">—</span></span>
+        <span class="sb-cell" data-k="mttr"><span class="sb-k">mttr·s</span><span class="sb-v" id="sb-mttr">—</span></span>
+        <span class="sb-cell" data-k="queue"><span class="sb-k">queue</span><span class="sb-v" id="sb-queue">0</span></span>
+        <span class="sb-spacer"></span>
+        <span class="sb-cell sb-trace" data-k="trace"><span class="sb-k">trace</span><span class="sb-v" id="sb-trace">—</span></span>
+      </div>
       <div id="feed" class="feed">
-        <div class="empty">No active incident. Type a service name, INC-ID, or describe the symptom in the chat&nbsp;&rarr;</div>
+        <div class="empty">// swarm at rest :: awaiting trigger<br>stdin&gt; service · INC-ID · symptom &rarr;</div>
       </div>
     </section>
 
     <aside class="chat-panel" aria-label="chat">
       <div class="chat-head">
-        <span class="chat-title">CHAT</span>
+        <span class="chat-title">prompt</span>
         <span class="chat-head-spacer"></span>
         <button class="chat-icon-btn" id="btn-clear-feed" title="Clear feed" aria-label="Clear feed">
           <svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor" aria-hidden="true"><path d="M11 1.75V3h2.25a.75.75 0 0 1 0 1.5H2.75a.75.75 0 0 1 0-1.5H5V1.75A1.75 1.75 0 0 1 6.75 0h2.5A1.75 1.75 0 0 1 11 1.75Zm-6 5a.75.75 0 0 1 1.5 0v6a.75.75 0 0 1-1.5 0Zm3.5 0a.75.75 0 0 1 1.5 0v6a.75.75 0 0 1-1.5 0ZM4.99 5.69 5.5 14.5h5l.51-8.81a.75.75 0 1 1 1.498.086L11.997 14.6a1.5 1.5 0 0 1-1.498 1.4H5.501a1.5 1.5 0 0 1-1.498-1.4L3.49 5.776a.75.75 0 0 1 1.5-.086Z"/></svg>
@@ -63,68 +76,68 @@
       <div class="chat-body">
         <section id="panel-conversation" class="side-panel-section active" role="tabpanel">
           <div class="side-section-head">
-            <span class="side-section-title">Conversation</span>
+            <span class="side-section-title">console</span>
             <span id="conv-updated" class="side-section-sub"></span>
           </div>
           <div id="conv-list" class="conv-list">
-            <div class="empty side-empty">No conversation yet. Type a service name or describe a symptom below to start.</div>
+            <div class="empty side-empty">// console clear<br>stdin&gt; service · symptom · INC-ID</div>
           </div>
         </section>
         <section id="panel-vulns" class="side-panel-section" role="tabpanel" hidden>
           <div class="side-section-head">
-            <span class="side-section-title">Observer findings</span>
+            <span class="side-section-title">anomaly stream</span>
             <span id="vulns-updated" class="side-section-sub"></span>
           </div>
           <div id="vulns-list" class="vulns-list">
-            <div class="empty side-empty">No findings yet. Observer polls every ~10s.</div>
+            <div class="empty side-empty">// no anomalies :: observer @ 10s tick</div>
           </div>
         </section>
         <section id="panel-inbox" class="side-panel-section" role="tabpanel" hidden>
           <div class="side-section-head">
-            <span class="side-section-title">Queued incidents</span>
+            <span class="side-section-title">incident queue</span>
             <span id="inbox-updated" class="side-section-sub"></span>
           </div>
           <div id="inbox-list" class="inbox-list">
-            <div class="empty side-empty">No queued incidents.</div>
+            <div class="empty side-empty">// queue empty</div>
           </div>
         </section>
         <section id="panel-metrics" class="side-panel-section" role="tabpanel" hidden>
           <div class="side-section-head">
-            <span class="side-section-title">Live Prometheus</span>
+            <span class="side-section-title">telemetry · live</span>
             <span id="metrics-updated" class="side-section-sub"></span>
           </div>
           <div id="metrics-list" class="metrics-list">
-            <div class="empty side-empty">Start an investigation to see live metrics for the affected service.</div>
+            <div class="empty side-empty">// telemetry idle :: trigger an incident to scope live metrics</div>
           </div>
         </section>
         <section id="panel-logs" class="side-panel-section" role="tabpanel" hidden>
           <div class="side-section-head">
-            <span class="side-section-title">Recent errors (Splunk)</span>
+            <span class="side-section-title">events · err/crit</span>
             <span id="logs-updated" class="side-section-sub"></span>
           </div>
           <div id="logs-list" class="logs-list">
-            <div class="empty side-empty">Start an investigation to pull recent ERROR/CRITICAL events.</div>
+            <div class="empty side-empty">// event stream idle :: trigger an incident to scope ERROR/CRITICAL</div>
           </div>
         </section>
         <section id="panel-github" class="side-panel-section" role="tabpanel" hidden>
           <div class="side-section-head">
-            <span class="side-section-title">GitHub activity</span>
+            <span class="side-section-title">scm · diff stream</span>
             <span id="github-updated" class="side-section-sub"></span>
           </div>
           <div id="github-list" class="github-list">
-            <div class="empty side-empty">Recent commits + PRs touching the affected service.</div>
+            <div class="empty side-empty">// scm idle :: recent commits + PRs surface here on trigger</div>
           </div>
         </section>
       </div>
       <div class="composer">
-        <textarea id="input" rows="1" placeholder="Investigate a service, paste INC-ID, or guide the active incident&hellip;" autocomplete="off"></textarea>
+        <textarea id="input" rows="1" placeholder="exec&gt; service · INC-ID · symptom &hellip;" autocomplete="off"></textarea>
         <div class="composer-footer">
           <span class="model-pill">
             <svg viewBox="0 0 16 16" width="11" height="11" fill="currentColor" aria-hidden="true"><path d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1Zm0 12.5A5.5 5.5 0 1 1 8 2.5a5.5 5.5 0 0 1 0 11Z"/><circle cx="8" cy="8" r="2.5"/></svg>
-          Agent &middot; llama3.1
+          swarm-agent::llama3.1 @ ollama
           </span>
           <span class="composer-footer-spacer"></span>
-          <span class="composer-hint">Enter to send &middot; Shift+Enter newline</span>
+          <span class="composer-hint">⏎ exec &middot; ⇧⏎ newline</span>
           <button id="send" class="send-btn" title="Send" aria-label="Send">
             <svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor" aria-hidden="true"><path d="M.989 8 .064 2.68a1.342 1.342 0 0 1 1.85-1.462l13.402 5.744a1.13 1.13 0 0 1 0 2.076L1.913 14.782a1.343 1.343 0 0 1-1.85-1.463L.99 8ZM2.45 1.97l.78 4.5h4.34a.75.75 0 0 1 0 1.5H3.23l-.78 4.5L14.78 8 2.45 1.97Z"/></svg>
           </button>
@@ -132,6 +145,18 @@
       </div>
     </aside>
   </main>
+
+  <footer class="status-dock" aria-label="status dock">
+    <span class="sd-cell sd-mode" id="sd-mode">NORMAL</span>
+    <span class="sd-cell"><kbd>⏎</kbd> dispatch</span>
+    <span class="sd-cell"><kbd>⇧⏎</kbd> newline</span>
+    <span class="sd-cell"><kbd>A</kbd> approve</span>
+    <span class="sd-cell"><kbd>R</kbd> reject</span>
+    <span class="sd-cell"><kbd>G</kbd> guide</span>
+    <span class="sd-spacer"></span>
+    <span class="sd-cell sd-clock" id="sd-clock">--:--:--</span>
+    <span class="sd-cell sd-fleet" id="sd-fleet">fleet · idle</span>
+  </footer>
 
   <script src="/static/app.js"></script>
 </body>

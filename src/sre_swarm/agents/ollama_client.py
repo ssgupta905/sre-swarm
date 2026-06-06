@@ -168,6 +168,31 @@ class OllamaClient:
             return resp.json()
 
 
+# Keys that small open models hallucinate as tool-call kwargs because they
+# appear in the heal-step OUTPUT schema (`{executed, new_state, result, tool}`)
+# and in tool RESULT wrappers (`{isError, content}`). No registered tool
+# accepts any of these as an input arg, so it is safe to strip them
+# unconditionally. Doing this here prevents the same call from failing 3+
+# times in a row while the model is staring at its own previous response.
+_HALLUCINATED_ARG_KEYS = frozenset({
+    "executed", "new_state", "result", "tool", "tool_name",
+    "isError", "is_error", "content",
+})
+
+
+def _sanitize_tool_args(args: dict) -> tuple[dict, list[str]]:
+    if not isinstance(args, dict):
+        return args, []
+    dropped: list[str] = []
+    clean: dict = {}
+    for k, v in args.items():
+        if k in _HALLUCINATED_ARG_KEYS:
+            dropped.append(k)
+            continue
+        clean[k] = v
+    return clean, dropped
+
+
 async def run_tool_loop(
     client: OllamaClient,
     system_prompt: str,
@@ -193,6 +218,18 @@ async def run_tool_loop(
     ]
 
     final_text = ""
+    # Loop-breaker: two complementary counters.
+    #   - stuck_streak: consecutive identical (tool, error) signatures
+    #   - sanitizer_fires: cumulative count of response-schema-as-args fires,
+    #     even if interleaved with successful calls (the alternating pattern
+    #     where the model does VALID → INVALID → VALID → INVALID).
+    # Either crossing its limit forces an early break, letting the synthesis
+    # turn produce the structured answer instead of burning all max_turns.
+    stuck_streak = 0
+    last_failure: Optional[tuple[str, str]] = None
+    sanitizer_fires = 0
+    STUCK_LIMIT = 3
+    SANITIZER_LIMIT = 3
     for turn in range(max_turns):
         resp = await client.chat(messages, tools=tool_specs if tool_specs else None)
         msg = resp.get("message") or {}
@@ -213,13 +250,17 @@ async def run_tool_loop(
         if not tool_calls:
             break
 
+        turn_failure_sig: Optional[tuple[str, str]] = None
         for idx, tc in enumerate(tool_calls):
             fn_block = tc.get("function") or {}
             name = fn_block.get("name") or ""
-            args = _coerce_arguments(fn_block.get("arguments"))
+            raw_args = _coerce_arguments(fn_block.get("arguments"))
+            args, dropped = _sanitize_tool_args(raw_args)
             tool_id = tc.get("id") or f"call_{turn}_{idx}"
 
             if on_tool_call is not None:
+                # Surface only the sanitized args to the UI so operators see
+                # what the tool actually received.
                 await on_tool_call(tool_id, name, args)
 
             handler = tool_by_name.get(name)
@@ -227,6 +268,21 @@ async def run_tool_loop(
                 result: dict = {
                     "isError": True,
                     "content": [{"type": "text", "text": f"unknown tool: {name}"}],
+                }
+            elif dropped and not args:
+                # Every arg the model sent was a hallucinated response-schema
+                # field. Skip the dispatch entirely and return a sharp,
+                # actionable error so the model corrects course on the next
+                # turn instead of repeating the malformed call.
+                sanitizer_fires += 1
+                result = {
+                    "isError": True,
+                    "content": [{"type": "text", "text": (
+                        f"{name}: you passed only response-schema fields as args "
+                        f"({', '.join(sorted(dropped))}). Those are OUTPUT keys "
+                        f"from a prior tool/step, not INPUT args. Re-issue the call "
+                        f"using ONLY the documented parameters from the tool spec."
+                    )}],
                 }
             else:
                 try:
@@ -246,6 +302,52 @@ async def run_tool_loop(
                 "name": name,
                 "content": _stringify_tool_result(result),
             })
+
+            if is_error and turn_failure_sig is None:
+                # Capture a short signature: tool name + first line of error text.
+                err_text = _stringify_tool_result(result) or ""
+                turn_failure_sig = (name, err_text.splitlines()[0][:120] if err_text else "")
+
+        if turn_failure_sig is not None and turn_failure_sig == last_failure:
+            stuck_streak += 1
+        elif turn_failure_sig is not None:
+            stuck_streak = 1
+            last_failure = turn_failure_sig
+        else:
+            stuck_streak = 0
+            last_failure = None
+
+        if stuck_streak >= STUCK_LIMIT:
+            if os.environ.get("SRE_SWARM_DEBUG"):
+                sys.stderr.write(
+                    f"[debug] ollama tool loop broke early: stuck on {last_failure!r} for {stuck_streak} turns\n"
+                )
+            messages.append({
+                "role": "user",
+                "content": (
+                    "Stop calling tools. The last tool call failed the same way "
+                    "multiple times in a row. Produce the final answer now using "
+                    "only the information you already have."
+                ),
+            })
+            break
+
+        if sanitizer_fires >= SANITIZER_LIMIT:
+            if os.environ.get("SRE_SWARM_DEBUG"):
+                sys.stderr.write(
+                    f"[debug] ollama tool loop broke early: sanitizer fired {sanitizer_fires} times\n"
+                )
+            messages.append({
+                "role": "user",
+                "content": (
+                    "Stop calling tools. You have repeatedly passed response-schema "
+                    "fields (executed/tool/result/new_state) as tool arguments. "
+                    "Those keys belong to your FINAL TEXT response, not to any tool "
+                    "call. Emit the final JSON object now using the information "
+                    "from the successful calls you already made."
+                ),
+            })
+            break
     else:
         if os.environ.get("SRE_SWARM_DEBUG"):
             sys.stderr.write(

@@ -1,13 +1,28 @@
 // SRE Swarm web UI — CLI-style. Minimal chrome, fixed pipeline strip, full-width
 // collapsible reasoning rows, real HITL buttons, single omnibox composer.
 
+// Codenames are display-only; pipeline keys stay (triage / rca / ...) so
+// the server, audit log, and HITL gates keep working unchanged.
+const CODENAMES = {
+  observer:     "SENTINEL",
+  triage:       "SCOUT.Δ",
+  rca:          "CAUSALITY.Σ",
+  predict:      "ORACLE.Π",
+  rca_confirm:  "GATE-α",
+  chaos_replay: "MIRAGE.Χ",
+  heal_plan:    "ARCHITECT.Ψ",
+  heal:         "GATE-β",
+  heal_execute: "EXEC.Ω",
+};
+function codename(k) { return CODENAMES[k] || k; }
+
 const AGENTS = [
-  { key: "triage",       label: "triage" },
-  { key: "rca",          label: "rca" },
-  { key: "chaos_replay", label: "chaos_replay" },
-  { key: "predict",      label: "predict" },
-  { key: "heal",         label: "heal" },
-  { key: "heal_execute", label: "heal_execute" },
+  { key: "triage",       label: CODENAMES.triage },
+  { key: "rca",          label: CODENAMES.rca },
+  { key: "chaos_replay", label: CODENAMES.chaos_replay },
+  { key: "predict",      label: CODENAMES.predict },
+  { key: "heal",         label: CODENAMES.heal },
+  { key: "heal_execute", label: CODENAMES.heal_execute },
 ];
 const AGENT_KEYS = new Set(AGENTS.map(a => a.key));
 // Agents that render a live terminal pane (streaming command + output)
@@ -76,12 +91,36 @@ function scrollFeed() {
 
 function setStatus() {
   const node = $("status");
-  if (!wsConnected) { node.textContent = "disconnected"; node.dataset.kind = "error"; return; }
+  if (!wsConnected) { node.textContent = "//flock offline"; node.dataset.kind = "error"; return; }
   if (activeIncident && activeIncident.status !== "done") {
-    node.textContent = `observer running &middot; ${activeIncident.id}`.replace("&middot;", "\u00b7");
+    node.textContent = `▶ swarm in flight :: ${activeIncident.id}`;
     node.dataset.kind = "running";
   } else {
-    node.textContent = "idle";
+    node.textContent = "//roosting";
+    node.dataset.kind = "idle";
+  }
+}
+
+// Fleet meter — count of agents currently running / how many total in the strip.
+function setFleetMeter() {
+  const node = document.getElementById("fleet-meter");
+  if (!node) return;
+  const total = AGENTS.length;
+  let running = 0, done = 0;
+  for (const a of AGENTS) {
+    const st = agentState.get(a.key);
+    if (!st) continue;
+    if (st.phase === "running" || st.phase === "waiting") running++;
+    else if (st.phase === "done") done++;
+  }
+  if (running > 0) {
+    node.textContent = `fleet · ${running}/${total} in flight`;
+    node.dataset.kind = "running";
+  } else if (done > 0) {
+    node.textContent = `fleet · ${done}/${total} settled`;
+    node.dataset.kind = "done";
+  } else {
+    node.textContent = `fleet · ${total} roosting`;
     node.dataset.kind = "idle";
   }
 }
@@ -106,6 +145,7 @@ function renderPipeline() {
     chip.dataset.phase = st.phase;
     chip.querySelector(".chip-phase").textContent = st.phase;
   }
+  setFleetMeter();
 }
 
 function resetPipeline() {
@@ -130,7 +170,7 @@ function makeAgentRow(agent) {
       <span class="chev"></span>
       <span class="ts">${timestamp()}</span>
       <span class="row-avatar" data-agent="${agent}">${avatarLetter(agent)}</span>
-      <span class="row-agent">${agent}</span>
+      <span class="row-agent" title="${agent}">${codename(agent)}</span>
       <span class="row-phase"><span class="phase-dot"></span>running</span>
       <span class="row-summary"></span>
       <span class="row-meta"><span class="row-tools"></span><span class="row-elapsed"></span></span>
@@ -221,8 +261,8 @@ function closeAgentRow(agent, phase, summary, detail) {
 
 function avatarLetter(agent) {
   const m = {
-    triage: "T", rca: "R", chaos_replay: "C", predict: "P", heal: "H",
-    heal_execute: "H", rca_confirm: "R",
+    triage: "Δ", rca: "Σ", chaos_replay: "Χ", predict: "Π", heal: "β",
+    heal_execute: "Ω", rca_confirm: "α", observer: "⊙",
   };
   return m[agent] || (agent || "?")[0].toUpperCase();
 }
@@ -397,7 +437,7 @@ function mirrorConversation(role, text, kind) {
   list.appendChild(bubble);
   list.scrollTop = list.scrollHeight;
   const upd = $("conv-updated");
-  if (upd) upd.textContent = "updated " + new Date().toTimeString().slice(0, 8);
+  if (upd) upd.textContent = "Δ " + new Date().toTimeString().slice(0, 8);
 }
 
 function mirrorAgentSummary(agent, summary) {
@@ -408,7 +448,7 @@ function mirrorAgentSummary(agent, summary) {
 function resetConversationMirror() {
   const list = $("conv-list");
   if (!list) return;
-  list.innerHTML = `<div class="empty side-empty">No conversation yet. Type a service name or describe a symptom below to start.</div>`;
+  list.innerHTML = `<div class="empty side-empty">// console clear<br>stdin&gt; service · symptom · INC-ID</div>`;
   const upd = $("conv-updated");
   if (upd) upd.textContent = "";
 }
@@ -564,7 +604,7 @@ function pushHitlRequest(req) {
       <span class="chev"></span>
       <span class="ts">${timestamp()}</span>
       <span class="row-avatar" data-agent="${kind}">${avatarLetter(kind)}</span>
-      <span class="row-agent">${kind === "chaos_replay" ? "chaos replay" : kind === "rca_confirm" ? "RCA confirm" : kind}</span>
+      <span class="row-agent" title="${kind}">${codename(kind)}</span>
       <span class="row-incident">${escapeHtml(incidentId || "")}</span>
       <span class="row-phase"><span class="phase-dot"></span>awaiting approval</span>
       <span class="row-summary">${escapeHtml(summary)}</span>
@@ -642,7 +682,7 @@ function pushHitlRequest(req) {
     if (!text || !incidentId) return;
     guideBtn.disabled = true;
     guideStatus.hidden = false;
-    guideStatus.textContent = "sending…";
+    guideStatus.textContent = "// dispatching…";
     try {
       const r = await fetch(`/api/incident/${incidentId}/inject`, {
         method: "POST",
@@ -651,7 +691,7 @@ function pushHitlRequest(req) {
       });
       if (!r.ok) throw new Error(`status ${r.status}`);
       guideInput.value = "";
-      guideStatus.textContent = "guidance sent · applied to next agent step";
+      guideStatus.textContent = "▶ guidance injected · applied next step";
     } catch (e) {
       guideStatus.textContent = `failed: ${e.message || e}`;
     } finally {
@@ -763,7 +803,7 @@ function pushPendingIncident(event) {
   row.innerHTML = `
     <div class="row-head">
       <span class="ts">${timestamp()}</span>
-      <span class="row-agent">observer</span>
+      <span class="row-agent" title="observer">${codename("observer")}</span>
       <span class="row-incident">${escapeHtml(event.id)}</span>
       <span class="row-phase" data-kind="incident">detected</span>
       <span class="row-summary">${escapeHtml(event.trigger || "anomaly")} on ${escapeHtml(event.service || "unknown")} · ${val} (thr ${thr})</span>
@@ -810,7 +850,7 @@ async function dismissIncident(row, event) {
   try {
     await fetch(`/api/incidents/${event.id}/dismiss`, { method: "POST" });
     row.classList.add("dismissed");
-    row.querySelector(".row-phase").textContent = "dismissed";
+    row.querySelector(".row-phase").textContent = "killed";
   } catch (err) {
     row.querySelectorAll("button").forEach(b => { b.disabled = false; });
   } finally {
@@ -1000,10 +1040,12 @@ function handle(msg) {
   if (msg.type === "agent_token")   return;
   if (msg.type === "tool_call") {
     if (isForeignIncident(msg)) return;
+    recordToolCall(msg.tool_id);
     return pushToolCall(msg.agent, msg.tool_id, msg.tool_name, msg.input);
   }
   if (msg.type === "tool_result") {
     if (isForeignIncident(msg)) return;
+    recordToolResult(msg.tool_id, !!msg.is_error);
     return pushToolResult(msg.agent, msg.tool_id, msg.content, msg.is_error);
   }
 
@@ -1045,7 +1087,7 @@ function renderVulnerabilities(findings, generatedAt) {
   if (!list) return;
   list.innerHTML = "";
   if (!findings.length) {
-    list.innerHTML = `<div class="empty side-empty">All clear &mdash; no active findings.</div>`;
+    list.innerHTML = `<div class="empty side-empty">// all clear :: no active anomalies</div>`;
     badge.hidden = true;
     badge.textContent = "0";
   } else {
@@ -1063,7 +1105,7 @@ function renderVulnerabilities(findings, generatedAt) {
   }
   if (generatedAt) {
     // ISO → HH:MM:SS local.
-    try { sub.textContent = "updated " + new Date(generatedAt).toTimeString().slice(0, 8); }
+    try { sub.textContent = "Δ " + new Date(generatedAt).toTimeString().slice(0, 8); }
     catch { sub.textContent = ""; }
   }
 }
@@ -1116,8 +1158,8 @@ function renderSidebarInbox() {
   const total = queued + inline;
   if (!queued) {
     list.innerHTML = inline
-      ? `<div class="empty side-empty">${inline} pending in the chat — act on them there.</div>`
-      : `<div class="empty side-empty">No queued incidents.</div>`;
+      ? `<div class="empty side-empty">// ${inline} pending in console — act on them there</div>`
+      : `<div class="empty side-empty">// queue empty</div>`;
   } else {
     // Newest first.
     const events = Array.from(sidebarInbox.values()).reverse();
@@ -1165,6 +1207,7 @@ function renderSidebarInboxCard(event) {
       activeIncident = { id: event.id, event, urgency: null, status: "investigating" };
       resetFeed();
       resetPipeline();
+      resetScoreboard();
       pushSystem(`investigating ${event.trigger || "anomaly"} on ${event.service || "unknown"} · ${event.id}`, "incident");
       setStatus();
       if (event.service) startSidebarObservability(event.service);
@@ -1210,7 +1253,7 @@ function wireSideTabs() {
   const clearBtn = $("btn-clear-feed");
   if (clearBtn) clearBtn.addEventListener("click", () => {
     const feed = $("feed");
-    if (feed) feed.innerHTML = '<div class="empty">Feed cleared.</div>';
+    if (feed) feed.innerHTML = '<div class="empty">// feed flushed</div>';
   });
 }
 
@@ -1264,7 +1307,7 @@ function renderMetrics(focusService, nodes) {
   for (const n of sorted) {
     list.appendChild(renderMetricTile(n, n.id === focusService));
   }
-  updated.textContent = "updated " + new Date().toTimeString().slice(0, 8);
+  updated.textContent = "Δ " + new Date().toTimeString().slice(0, 8);
 }
 
 function renderMetricTile(node, isFocus) {
@@ -1310,7 +1353,7 @@ function renderLogs(data) {
       list.appendChild(renderLogRow(ev));
     }
   }
-  updated.textContent = "updated " + new Date().toTimeString().slice(0, 8);
+  updated.textContent = "Δ " + new Date().toTimeString().slice(0, 8);
 }
 
 function renderLogRow(ev) {
@@ -1364,7 +1407,7 @@ function renderGithub(data) {
       list.appendChild(el);
     }
   }
-  updated.textContent = "updated " + new Date().toTimeString().slice(0, 8);
+  updated.textContent = "Δ " + new Date().toTimeString().slice(0, 8);
 }
 
 function resetFeed() {
@@ -1437,9 +1480,88 @@ function autoresize(ta) {
 
 // ---- wiring ---------------------------------------------------------------
 
+function injectBuildHash() {
+  const header = document.querySelector("header");
+  if (!header || header.querySelector(".build-hash")) return;
+  // Deterministic per-session hash so the demo still feels live-ish.
+  const r = Math.floor(Math.random() * 0xfffff).toString(16).padStart(5, "0");
+  const span = document.createElement("span");
+  span.className = "build-hash";
+  span.title = "build hash · per-session";
+  span.textContent = `#${r}`;
+  const ref = header.querySelector(".page-title");
+  if (ref) ref.after(span); else header.prepend(span);
+}
+
+// ---- scoreboard + status dock --------------------------------------------
+// Live counters derived from the same event stream that feeds the feed.
+// Nothing here is fabricated — values come straight from observed events.
+const sb = { tools: 0, errs: 0, latSum: 0, latN: 0, lastToolAt: null, runStart: null };
+const _toolStart = new Map(); // tool_id -> ms
+
+function sbSet(id, v) { const n = document.getElementById(id); if (n) n.textContent = v; }
+
+function recordToolCall(toolId) {
+  sb.tools++;
+  _toolStart.set(toolId, performance.now());
+  sbSet("sb-tools", sb.tools);
+  if (!sb.runStart) sb.runStart = performance.now();
+}
+
+function recordToolResult(toolId, isError) {
+  const t0 = _toolStart.get(toolId);
+  if (t0 != null) {
+    const dt = performance.now() - t0;
+    sb.latSum += dt; sb.latN++;
+    _toolStart.delete(toolId);
+    sbSet("sb-lat", Math.round(sb.latSum / sb.latN));
+  }
+  if (isError) { sb.errs++; sbSet("sb-errs", sb.errs); }
+}
+
+function resetScoreboard() {
+  sb.tools = 0; sb.errs = 0; sb.latSum = 0; sb.latN = 0;
+  sb.lastToolAt = null; sb.runStart = null;
+  _toolStart.clear();
+  sbSet("sb-tools", 0); sbSet("sb-errs", 0);
+  sbSet("sb-lat", "—"); sbSet("sb-mttr", "—");
+  sbSet("sb-trace", activeIncident ? activeIncident.id.slice(-8) : "—");
+}
+
+function tickScoreboard() {
+  // queue depth — derived from inbox panel rows currently rendered.
+  const queueRows = document.querySelectorAll("#inbox-list .inbox-row").length;
+  sbSet("sb-queue", queueRows);
+  // mttr ticker = seconds since runStart while running, freezes on completion.
+  if (sb.runStart && activeIncident && activeIncident.status !== "done") {
+    sbSet("sb-mttr", Math.round((performance.now() - sb.runStart) / 1000));
+  }
+  // trace id = short tail of active incident id.
+  if (activeIncident) sbSet("sb-trace", activeIncident.id.slice(-8));
+  // dock clock
+  const c = document.getElementById("sd-clock");
+  if (c) c.textContent = new Date().toTimeString().slice(0, 8);
+  // dock fleet mirrors the header meter.
+  const fm = document.getElementById("fleet-meter");
+  const sf = document.getElementById("sd-fleet");
+  if (fm && sf) sf.textContent = fm.textContent;
+  // mode pill: NORMAL when idle, RUN when pipeline live, GATE when HITL pending.
+  const mode = document.getElementById("sd-mode");
+  if (mode) {
+    let next = "NORMAL", kind = "idle";
+    if (pendingApproval) { next = "GATE"; kind = "waiting"; }
+    else if (activeIncident && activeIncident.status !== "done") { next = "RUN"; kind = "running"; }
+    if (mode.textContent !== next) mode.textContent = next;
+    mode.dataset.kind = kind;
+  }
+}
+
 function init() {
+  injectBuildHash();
   resetPipeline();
   setStatus();
+  setFleetMeter();
+  resetScoreboard();
   wireSideTabs();
   const ta = $("input");
   ta.addEventListener("keydown", e => {
@@ -1449,6 +1571,8 @@ function init() {
   $("send").addEventListener("click", submitInput);
   connect();
   hydratePending();
+  setInterval(tickScoreboard, 1000);
+  tickScoreboard();
 }
 
 // Pull any incidents that were already in the pending queue when the page

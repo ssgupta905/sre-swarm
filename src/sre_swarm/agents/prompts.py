@@ -306,4 +306,16 @@ Common mistakes to avoid:
 - DO NOT call kubectl_get with resource="{service}" — that is a name, not a type.
 - DO NOT call kubectl_rollout_restart with empty args; "deployment" is required.
 - DO NOT swap "name" and "deployment"; restart/scale use "deployment", get/patch use "name".
+
+CRITICAL — response vs tool call:
+The fields `executed`, `tool`, `result`, `new_state` belong to your FINAL TEXT
+RESPONSE. They are NEVER valid tool-call arguments. No tool accepts them.
+After your one successful tool call, STOP calling tools and emit the JSON.
+
+WRONG (do not do this — the model often loops here):
+  tool_call: kubectl_rollout_restart({{"executed": true, "tool": "kubectl_rollout_restart", "result": "...", "new_state": "..."}})
+
+RIGHT:
+  tool_call: kubectl_rollout_restart({{"deployment": "{service}", "namespace": "{namespace}"}})
+  then assistant text: {{"executed": true, "tool": "kubectl_rollout_restart", "result": "ok", "new_state": "restarted"}}
 """.strip()

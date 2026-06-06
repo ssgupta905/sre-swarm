@@ -1,33 +1,35 @@
-/* SRE Swarm — minimal CLI-style UI */
+/* SRE.SWARM // ops kernel — dark terminal UI */
 
 :root {
-  /* GitHub Copilot light palette (Primer) */
-  --bg:          #ffffff;
-  --surface:     #f6f8fa;
-  --surface-2:   #f0f2f5;
-  --surface-3:   #eaeef2;
-  --border:      #d1d9e0;
-  --border-soft: #eaeef2;
-  --text:        #1f2328;
-  --text-2:      #59636e;
-  --text-3:      #818b98;
-  --running:     #0969da;
-  --done:        #59636e;
-  --waiting:     #9a6700;
-  --error:       #d1242f;
-  --success:     #1a7f37;
-  --accent:      #0969da;
-  --accent-soft: #ddf4ff;
-  --warning-bg:  #fff8c5;
-  --error-bg:    #ffebe9;
-  --success-bg:  #dafbe1;
-  --shadow-sm:   0 1px 0 rgba(31, 35, 40, 0.04);
-  --shadow-md:   0 3px 6px rgba(140, 149, 159, 0.15);
-  --shadow-lg:   0 8px 24px rgba(140, 149, 159, 0.2);
-  --radius:      6px;
-  --radius-lg:   10px;
-  --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-  --sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Helvetica, Arial, sans-serif;
+  /* ops-terminal dark palette */
+  --bg:          #060a12;
+  --surface:     #0b1220;
+  --surface-2:   #0f1729;
+  --surface-3:   #142036;
+  --border:      #1c2942;
+  --border-soft: #131d31;
+  --text:        #e6edf7;
+  --text-2:      #94a3b8;
+  --text-3:      #5b6a85;
+  --running:     #22d3ee;   /* cyan */
+  --done:        #5b6a85;
+  --waiting:     #facc15;   /* amber */
+  --error:       #ef4444;
+  --success:     #34d399;   /* emerald */
+  --accent:      #22d3ee;
+  --accent-soft: rgba(34, 211, 238, 0.10);
+  --neon:        #2dd4bf;   /* teal — glow tint */
+  --magenta:     #c084fc;
+  --warning-bg:  rgba(250, 204, 21, 0.08);
+  --error-bg:    rgba(239, 68, 68, 0.10);
+  --success-bg:  rgba(52, 211, 153, 0.10);
+  --shadow-sm:   0 0 0 1px rgba(34, 211, 238, 0.05);
+  --shadow-md:   0 4px 14px rgba(0, 0, 0, 0.45);
+  --shadow-lg:   0 10px 32px rgba(0, 0, 0, 0.55);
+  --radius:      3px;
+  --radius-lg:   4px;
+  --mono: "JetBrains Mono", "Fira Code", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --sans: "JetBrains Mono", "Fira Code", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 }
 
 * { box-sizing: border-box; }
@@ -1848,3 +1850,509 @@ button.primary:hover:not(:disabled) { background: #0860c4; border-color: #0860c4
   font-family: var(--mono);
   font-size: 12px;
 }
+
+/* =====================================================================
+ *  HACKATHON "OPS-TERMINAL" OVERRIDES
+ *  scanlines · neon accents · sharper chrome · CRT vibes
+ * ===================================================================== */
+
+/* subtle vertical scanline texture across the whole app */
+html, body {
+  background:
+    radial-gradient(ellipse at top left, rgba(34,211,238,0.05), transparent 60%),
+    radial-gradient(ellipse at bottom right, rgba(192,132,252,0.04), transparent 70%),
+    var(--bg);
+  background-attachment: fixed;
+  letter-spacing: 0.01em;
+}
+body::before {
+  content: "";
+  position: fixed; inset: 0;
+  pointer-events: none;
+  background-image: repeating-linear-gradient(
+    0deg,
+    rgba(255,255,255,0.012) 0,
+    rgba(255,255,255,0.012) 1px,
+    transparent 1px,
+    transparent 3px
+  );
+  mix-blend-mode: overlay;
+  z-index: 9999;
+}
+
+/* header — terminal prompt vibe */
+header {
+  background: linear-gradient(180deg, #0a1322 0%, #060a12 100%);
+  border-bottom: 1px solid var(--border);
+  box-shadow: inset 0 -1px 0 rgba(34,211,238,0.08), 0 2px 8px rgba(0,0,0,0.4);
+}
+.brand {
+  font-family: var(--mono);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--neon);
+  text-shadow: 0 0 8px rgba(45,212,191,0.45);
+  text-transform: uppercase;
+}
+.brand::before { content: "▌ "; color: var(--accent); opacity: 0.8; }
+.sep { color: var(--border); }
+.page-title { font-family: var(--mono); font-size: 11px; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.08em; }
+.header-link {
+  background: rgba(34,211,238,0.04);
+  border: 1px solid rgba(34,211,238,0.2);
+  color: var(--accent);
+  border-radius: 3px;
+}
+.header-link:hover {
+  background: rgba(34,211,238,0.1);
+  border-color: var(--accent);
+  color: var(--neon);
+  box-shadow: 0 0 10px rgba(34,211,238,0.25);
+}
+.status {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 10.5px;
+  padding: 2px 8px;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  background: rgba(255,255,255,0.02);
+}
+.status::before { box-shadow: 0 0 6px currentColor; }
+.status[data-kind="running"]::before { animation: pulse 1.2s ease-in-out infinite; }
+
+/* activity bar — neon left rail */
+.activity-bar {
+  background: linear-gradient(180deg, #0a1322 0%, #060a12 100%);
+  border-right: 1px solid var(--border);
+}
+.act-btn { color: var(--text-3); transition: color 0.15s, background 0.15s, box-shadow 0.15s; }
+.act-btn:hover { color: var(--neon); background: rgba(45,212,191,0.06); }
+.act-btn.active {
+  color: var(--neon);
+  border-left-color: var(--neon);
+  background: linear-gradient(90deg, rgba(45,212,191,0.10), transparent);
+  box-shadow: inset 2px 0 12px rgba(45,212,191,0.18);
+}
+.act-badge {
+  background: var(--accent);
+  color: #050810;
+  box-shadow: 0 0 6px rgba(34,211,238,0.6);
+  border: 1px solid rgba(255,255,255,0.15);
+}
+
+/* chat panel */
+.chat-panel {
+  background: linear-gradient(180deg, #0a1322 0%, #060a12 100%);
+  border-left: 1px solid var(--border);
+}
+.chat-head { border-bottom: 1px solid var(--border); background: rgba(255,255,255,0.015); }
+.chat-title {
+  color: var(--accent);
+  letter-spacing: 0.15em;
+}
+.chat-title::before { content: "$ "; color: var(--neon); opacity: 0.6; }
+.chat-icon-btn { color: var(--text-3); border-radius: 3px; }
+.chat-icon-btn:hover { background: rgba(34,211,238,0.08); color: var(--neon); }
+.side-section-title {
+  color: var(--neon);
+  font-size: 10.5px;
+  letter-spacing: 0.12em;
+}
+.side-section-title::before { content: "// "; color: var(--text-3); }
+.side-section-sub { color: var(--text-3); font-size: 10px; }
+
+/* editor pane: subtle dot grid */
+.editor-pane {
+  background:
+    linear-gradient(var(--bg), var(--bg)),
+    radial-gradient(rgba(34,211,238,0.06) 1px, transparent 1px);
+  background-size: auto, 18px 18px;
+  background-blend-mode: normal;
+}
+
+/* pipeline chips — terminal labels */
+.pipeline { border-bottom: 1px solid var(--border); }
+.chip {
+  background: rgba(255,255,255,0.02);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  letter-spacing: 0.04em;
+  text-transform: lowercase;
+}
+.chip[data-phase="running"] {
+  border-color: var(--accent);
+  background: rgba(34,211,238,0.08);
+  box-shadow: 0 0 12px rgba(34,211,238,0.25);
+}
+.chip[data-phase="running"] .chip-dot { box-shadow: 0 0 8px var(--accent); }
+.chip[data-phase="waiting"] {
+  border-color: var(--waiting);
+  background: rgba(250,204,21,0.06);
+}
+.chip[data-phase="done"] { color: var(--text-2); }
+.chip[data-phase="done"] .chip-dot { background: var(--success); box-shadow: 0 0 6px var(--success); }
+.chip[data-phase="error"] {
+  border-color: var(--error);
+  background: rgba(239,68,68,0.08);
+  box-shadow: 0 0 12px rgba(239,68,68,0.2);
+}
+
+/* universal rows / cards: sharper, with neon left bar on running */
+.row, .vuln, .inbox-card, .metric, .log-row, .gh-row {
+  border: 1px solid var(--border-soft);
+  background: var(--surface);
+  border-radius: 3px;
+}
+.row:hover, .vuln:hover, .inbox-card:hover {
+  border-color: rgba(34,211,238,0.35);
+  box-shadow: 0 0 0 1px rgba(34,211,238,0.08);
+}
+.inbox-card { border-left-width: 2px; border-left-color: var(--error); }
+
+/* severity / level pills — neon-tinted */
+.vuln-sev, .log-level {
+  border-radius: 2px;
+  font-size: 9.5px;
+  letter-spacing: 0.1em;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.06);
+}
+.vuln-sev[data-sev="critical"], .vuln-sev[data-sev="high"] {
+  background: rgba(239,68,68,0.10);
+  border-color: rgba(239,68,68,0.35);
+  color: var(--error);
+}
+.vuln-sev[data-sev="medium"] {
+  background: rgba(250,204,21,0.08);
+  border-color: rgba(250,204,21,0.35);
+  color: var(--waiting);
+}
+.log-level[data-level="error"],
+.log-level[data-level="critical"] {
+  background: rgba(239,68,68,0.10);
+  border-color: rgba(239,68,68,0.35);
+  color: var(--error);
+}
+.log-level[data-level="warn"],
+.log-level[data-level="warning"] {
+  background: rgba(250,204,21,0.08);
+  border-color: rgba(250,204,21,0.35);
+  color: var(--waiting);
+}
+
+/* metric value glow on breach */
+.metric-value[data-state="breach"] { text-shadow: 0 0 10px rgba(239,68,68,0.55); }
+.metric-value[data-state="warn"]   { text-shadow: 0 0 8px rgba(250,204,21,0.45); }
+
+/* composer — terminal input */
+.composer {
+  background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+  border-top: 1px solid var(--border);
+}
+.composer textarea {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: var(--mono);
+  border-radius: 3px;
+  caret-color: var(--neon);
+}
+.composer textarea::placeholder { color: var(--text-3); font-family: var(--mono); }
+.composer textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px rgba(34,211,238,0.4), 0 0 14px rgba(34,211,238,0.2);
+}
+.composer-hint { font-size: 10.5px; color: var(--text-3); letter-spacing: 0.04em; }
+.model-pill {
+  background: rgba(34,211,238,0.06);
+  border: 1px solid rgba(34,211,238,0.25);
+  color: var(--neon);
+  border-radius: 2px;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  padding: 2px 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.send-btn {
+  background: var(--accent);
+  color: #050810;
+  border: none;
+  border-radius: 2px;
+  box-shadow: 0 0 12px rgba(34,211,238,0.45);
+}
+.send-btn:hover { background: var(--neon); box-shadow: 0 0 18px rgba(45,212,191,0.7); }
+
+/* buttons (inbox actions, system page) */
+.inbox-card-actions button {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--border);
+  color: var(--text-2);
+  border-radius: 2px;
+  font-family: var(--mono);
+  text-transform: lowercase;
+  letter-spacing: 0.04em;
+}
+.inbox-card-actions button:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.inbox-card-actions button.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #050810;
+  box-shadow: 0 0 10px rgba(34,211,238,0.4);
+}
+
+/* empty messages — terminal-style */
+.empty, .side-empty {
+  color: var(--text-3);
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: 0.02em;
+}
+.empty::before, .side-empty::before { content: ""; }
+
+/* scrollbars: thin neon */
+*::-webkit-scrollbar { width: 8px; height: 8px; }
+*::-webkit-scrollbar-thumb {
+  background: rgba(34,211,238,0.18);
+  border-radius: 2px;
+}
+*::-webkit-scrollbar-thumb:hover { background: rgba(34,211,238,0.4); }
+*::-webkit-scrollbar-track { background: transparent; }
+
+/* narration agent avatars — neon-shifted */
+.row.narration .narr-avatar[data-agent="triage"]       { background: #34d399; box-shadow: 0 0 8px rgba(52,211,153,0.5); }
+.row.narration .narr-avatar[data-agent="rca"]          { background: #22d3ee; box-shadow: 0 0 8px rgba(34,211,238,0.5); }
+.row.narration .narr-avatar[data-agent="chaos_replay"] { background: #facc15; color: #050810; box-shadow: 0 0 8px rgba(250,204,21,0.5); }
+.row.narration .narr-avatar[data-agent="predict"]      { background: #c084fc; box-shadow: 0 0 8px rgba(192,132,252,0.5); }
+.row.narration .narr-avatar[data-agent="heal"],
+.row.narration .narr-avatar[data-agent="heal_execute"] { background: #ef4444; box-shadow: 0 0 10px rgba(239,68,68,0.55); }
+.row.narration .narr-body code {
+  background: rgba(34,211,238,0.06);
+  border: 1px solid rgba(34,211,238,0.2);
+  color: var(--neon);
+}
+
+/* =====================================================================
+ *  AGENT CODENAMES  ·  bracketed mono labels + neon avatars
+ * ===================================================================== */
+
+.row-avatar {
+  border-radius: 2px;            /* square = chip vibe */
+  font-size: 11px;
+  font-weight: 700;
+  text-shadow: 0 0 6px rgba(0,0,0,0.5);
+  border: 1px solid rgba(255,255,255,0.12);
+}
+.row-avatar[data-agent="triage"]       { background: #34d399; color: #04140a; box-shadow: 0 0 8px rgba(52,211,153,0.45); }
+.row-avatar[data-agent="rca"]          { background: #22d3ee; color: #04161b; box-shadow: 0 0 8px rgba(34,211,238,0.45); }
+.row-avatar[data-agent="rca_confirm"]  { background: #facc15; color: #1a1300; box-shadow: 0 0 8px rgba(250,204,21,0.45); }
+.row-avatar[data-agent="chaos_replay"] { background: #c084fc; color: #1a0820; box-shadow: 0 0 8px rgba(192,132,252,0.45); }
+.row-avatar[data-agent="predict"]      { background: #60a5fa; color: #04101e; box-shadow: 0 0 8px rgba(96,165,250,0.45); }
+.row-avatar[data-agent="heal"]         { background: #facc15; color: #1a1300; box-shadow: 0 0 8px rgba(250,204,21,0.45); }
+.row-avatar[data-agent="heal_execute"] { background: #ef4444; color: #1a0405; box-shadow: 0 0 10px rgba(239,68,68,0.55); }
+.row-avatar[data-agent="observer"]     { background: #5b6a85; color: #e6edf7; box-shadow: 0 0 6px rgba(91,106,133,0.45); }
+
+/* Codename in the row head — uppercase, bracketed, neon */
+.row-agent {
+  text-transform: uppercase;
+  letter-spacing: 0.10em;
+  font-size: 11px;
+  color: var(--neon);
+}
+.row-agent::before { content: "[ "; color: var(--text-3); }
+.row-agent::after  { content: " ]"; color: var(--text-3); }
+
+/* Pipeline chip names — uppercase codenames, sharper */
+.chip-name {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 600;
+  font-size: 10.5px;
+  color: var(--text);
+}
+.chip[data-phase="running"] .chip-name { color: var(--neon); text-shadow: 0 0 6px rgba(45,212,191,0.6); }
+.chip[data-phase="done"]    .chip-name { color: var(--success); }
+.chip[data-phase="waiting"] .chip-name { color: var(--waiting); }
+.chip[data-phase="error"]   .chip-name { color: var(--error); }
+
+/* Phase text */
+.row-phase, .chip-phase { font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase; }
+
+/* Build-hash badge slot in header (injected by app.js on boot) */
+.build-hash {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--magenta);
+  padding: 2px 6px;
+  border: 1px solid rgba(192,132,252,0.3);
+  border-radius: 2px;
+  background: rgba(192,132,252,0.06);
+  letter-spacing: 0.08em;
+  margin-left: 4px;
+}
+
+/* =====================================================================
+ *  MURMUR  ·  swarm theme  ·  drifting flock backdrop + fleet meter
+ * ===================================================================== */
+
+/* Drifting flock: a fixed-position layer of tiny dots that slowly drift
+   diagonally. Pure CSS, no JS, GPU-cheap. Sits behind everything. */
+.flock {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.55;
+  background-image:
+    radial-gradient(1px 1px at 12% 18%,  rgba(45,212,191,0.55) 50%, transparent 51%),
+    radial-gradient(1px 1px at 27% 73%,  rgba(34,211,238,0.45) 50%, transparent 51%),
+    radial-gradient(1px 1px at 41% 32%,  rgba(45,212,191,0.40) 50%, transparent 51%),
+    radial-gradient(1px 1px at 58% 88%,  rgba(96,165,250,0.45) 50%, transparent 51%),
+    radial-gradient(1px 1px at 71% 12%,  rgba(192,132,252,0.40) 50%, transparent 51%),
+    radial-gradient(1px 1px at 83% 57%,  rgba(34,211,238,0.50) 50%, transparent 51%),
+    radial-gradient(1px 1px at 91% 81%,  rgba(45,212,191,0.45) 50%, transparent 51%),
+    radial-gradient(1px 1px at  6% 52%,  rgba(96,165,250,0.40) 50%, transparent 51%),
+    radial-gradient(1px 1px at 33% 6%,   rgba(45,212,191,0.45) 50%, transparent 51%),
+    radial-gradient(1px 1px at 49% 64%,  rgba(192,132,252,0.45) 50%, transparent 51%),
+    radial-gradient(1px 1px at 64% 41%,  rgba(34,211,238,0.45) 50%, transparent 51%),
+    radial-gradient(1px 1px at 77% 95%,  rgba(45,212,191,0.50) 50%, transparent 51%);
+  background-size: 100% 100%;
+  animation: flock-drift 42s linear infinite;
+  filter: blur(0.3px);
+}
+@keyframes flock-drift {
+  0%   { transform: translate3d(0, 0, 0); }
+  50%  { transform: translate3d(-24px, 16px, 0); }
+  100% { transform: translate3d(0, 0, 0); }
+}
+/* Make sure all the real UI floats above the flock layer */
+header, main, .flock { position: relative; }
+header { z-index: 2; }
+main   { z-index: 1; }
+
+/* Brand: MURMUR  — wider letter-spacing, deeper neon, ▌ left-rail vibe */
+.brand {
+  letter-spacing: 0.16em !important;
+  text-shadow:
+    0 0 8px rgba(45,212,191,0.55),
+    0 0 18px rgba(34,211,238,0.25) !important;
+}
+
+/* Fleet meter — small pill, lives in the header right side */
+.fleet-meter {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.10em;
+  text-transform: lowercase;
+  color: var(--text-2);
+  padding: 3px 8px;
+  border: 1px solid rgba(45,212,191,0.22);
+  border-radius: 2px;
+  background: rgba(45,212,191,0.05);
+  margin-right: 8px;
+  white-space: nowrap;
+}
+.fleet-meter[data-kind="running"] {
+  color: var(--neon);
+  border-color: rgba(45,212,191,0.55);
+  background: rgba(45,212,191,0.10);
+  text-shadow: 0 0 6px rgba(45,212,191,0.55);
+  animation: fleet-pulse 1.6s ease-in-out infinite;
+}
+.fleet-meter[data-kind="done"] {
+  color: var(--success);
+  border-color: rgba(52,211,153,0.40);
+  background: rgba(52,211,153,0.08);
+}
+@keyframes fleet-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(45,212,191,0.0); }
+  50%      { box-shadow: 0 0 0 3px rgba(45,212,191,0.18); }
+}
+
+/* =====================================================================
+ *  SCOREBOARD  ·  thin metric ribbon under the pipeline strip
+ * ===================================================================== */
+.scoreboard {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 4px 14px;
+  border-top: 1px solid rgba(45,212,191,0.10);
+  border-bottom: 1px solid rgba(45,212,191,0.10);
+  background: linear-gradient(180deg, rgba(45,212,191,0.04) 0%, transparent 100%);
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  color: var(--text-2);
+  z-index: 2;
+}
+.sb-cell { display: inline-flex; align-items: baseline; gap: 6px; }
+.sb-k { text-transform: uppercase; opacity: 0.55; }
+.sb-v { color: var(--text); font-weight: 600; min-width: 1ch; }
+.sb-cell[data-k="errs"] .sb-v:not(:empty):not([data-zero]) { color: var(--error); }
+.sb-cell[data-k="tools"] .sb-v { color: var(--neon); }
+.sb-cell[data-k="mttr"]  .sb-v { color: var(--waiting); }
+.sb-trace .sb-v { color: var(--magenta); font-style: italic; }
+.sb-spacer { flex: 1; }
+
+/* =====================================================================
+ *  STATUS DOCK  ·  fixed bottom bar, k9s/vim vibe
+ * ===================================================================== */
+.status-dock {
+  position: fixed;
+  left: 0; right: 0; bottom: 0;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 0 12px;
+  background: linear-gradient(180deg, rgba(11,18,32,0.94) 0%, rgba(6,10,18,0.98) 100%);
+  border-top: 1px solid rgba(45,212,191,0.22);
+  font-family: var(--mono);
+  font-size: 10.5px;
+  color: var(--text-2);
+  letter-spacing: 0.04em;
+  z-index: 50;
+  backdrop-filter: blur(6px);
+}
+.sd-cell { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+.sd-cell kbd {
+  font-family: var(--mono);
+  font-size: 9.5px;
+  padding: 1px 4px;
+  border: 1px solid rgba(255,255,255,0.18);
+  border-radius: 2px;
+  background: rgba(255,255,255,0.04);
+  color: var(--text);
+}
+.sd-spacer { flex: 1; }
+.sd-mode {
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  padding: 1px 6px;
+  border-radius: 2px;
+  background: rgba(45,212,191,0.10);
+  border: 1px solid rgba(45,212,191,0.35);
+  color: var(--neon);
+}
+.sd-mode[data-kind="running"] {
+  background: rgba(45,212,191,0.18);
+  border-color: rgba(45,212,191,0.6);
+  text-shadow: 0 0 6px rgba(45,212,191,0.6);
+  animation: fleet-pulse 1.4s ease-in-out infinite;
+}
+.sd-mode[data-kind="waiting"] {
+  background: rgba(250,204,21,0.15);
+  border-color: rgba(250,204,21,0.55);
+  color: var(--waiting);
+}
+.sd-clock { color: var(--text-3); }
+.sd-fleet { color: var(--neon); }
+
+/* Make room for the fixed dock so content isn't covered. */
+body { padding-bottom: 22px; }
